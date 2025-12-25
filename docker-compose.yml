@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: gunicorn minghaishiyi.wsgi:application --bind 0.0.0.0:8000 --workers 4
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DJANGO_SETTINGS_MODULE=minghaishiyi.settings
+      - DATABASE_URL=mysql://root:qq525277891..@db:3306/minghaishiyi
+
+  db:
+    image: mysql:8.0
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=qq525277891..
+      - MYSQL_DATABASE=minghaishiyi
+    ports:
+      - "3306:3306"
+
+volumes:
+  mysql_data:
