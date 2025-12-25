@@ -4,7 +4,22 @@ from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import AllowAny
 from drf_yasg.utils import swagger_auto_schema
+from django_filters import FilterSet, CharFilter
 from .models import DestinyCase
+
+
+class DestinyCaseFilter(FilterSet):
+    """命例数据过滤器，支持模糊搜索"""
+    year_ganzhi = CharFilter(lookup_expr='icontains')
+    month_ganzhi = CharFilter(lookup_expr='icontains')
+    day_ganzhi = CharFilter(lookup_expr='icontains')
+    hour_ganzhi = CharFilter(lookup_expr='icontains')
+    source = CharFilter(lookup_expr='icontains')
+    label = CharFilter(lookup_expr='icontains')
+    
+    class Meta:
+        model = DestinyCase
+        fields = ['gender', 'year_ganzhi', 'month_ganzhi', 'day_ganzhi', 'hour_ganzhi', 'source', 'label']
 
 
 class DestinyCaseSerializer(serializers.ModelSerializer):
@@ -41,17 +56,8 @@ class DestinyCaseViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     permission_classes = [AllowAny]  # 允许所有用户访问
     
-    # 过滤字段配置
-    filterset_fields = [
-        'source', 'gender', 'year_ganzhi', 'month_ganzhi', 
-        'day_ganzhi', 'hour_ganzhi', 'label'
-    ]
-    
-    # 搜索字段配置
-    search_fields = [
-        'year_ganzhi', 'month_ganzhi', 'day_ganzhi', 'hour_ganzhi', 
-        'source', 'label', 'feedback'
-    ]
+    # 使用自定义过滤器（支持模糊搜索）
+    filterset_class = DestinyCaseFilter
     
     @swagger_auto_schema(
         operation_description='获取特定命例数据的详细信息',
@@ -68,3 +74,4 @@ class DestinyCaseViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         """获取命例数据列表"""
         return super().list(request, *args, **kwargs)
+
