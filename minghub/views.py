@@ -6,6 +6,8 @@ from rest_framework.permissions import AllowAny
 from drf_yasg.utils import swagger_auto_schema
 from django_filters import FilterSet, CharFilter
 from .models import DestinyCase
+from rest_framework.response import Response
+from rest_framework import mixins
 
 
 class DestinyCaseFilter(FilterSet):
@@ -43,11 +45,12 @@ class DestinyCasePagination(PageNumberPagination):
     max_page_size = 100  # 最大每页显示100条记录
 
 
-@swagger_auto_schema(
-    tags=['命例数据'],
-    operation_description='获取命例数据列表，支持分页、过滤和搜索',
-)
-class DestinyCaseViewSet(viewsets.ReadOnlyModelViewSet):
+@swagger_auto_schema(tags=['命例数据'], operation_description='获取命例数据列表，支持分页、过滤和搜索',)
+class DestinyCaseViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin, 
+    mixins.RetrieveModelMixin, 
+    viewsets.GenericViewSet):
     """命例数据视图集，仅提供只读功能"""
     
     queryset = DestinyCase.objects.all()  # 获取所有命例数据
@@ -75,3 +78,17 @@ class DestinyCaseViewSet(viewsets.ReadOnlyModelViewSet):
         """获取命例数据列表"""
         return super().list(request, *args, **kwargs)
 
+    @swagger_auto_schema(
+        operation_description='新增命例数据记录（需要passwd参数）',
+        request_body=DestinyCaseSerializer,
+        responses={
+            201: DestinyCaseSerializer,
+            400: "参数错误",
+            401: "密码错误"
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        password = request.data.get('passwd', '')
+        if password != 'minghaishiyi':
+            return Response({"error": "密码错误"}, status=401)
+        return super().create(request, *args, **kwargs)
