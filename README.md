@@ -1,203 +1,162 @@
-# 命海拾遗API后端
+# 命海拾遗
 
-## 项目介绍
-
-命海拾遗API后端是一个基于Django REST Framework开发的命例数据管理系统，提供命例数据的查询、过滤和搜索功能。
+八字命例数据管理系统。存储、查询、管理中国传统八字（四柱）命理案例，附 CLI 工具用于从微信公众号文章抓取并提取命例数据。
 
 ## 技术栈
 
-- **Python 3.12**
-- **Django 6.0**
-- **Django REST Framework**
+- **Python 3.12** / **Django 6.0** / **Django REST Framework 3.15**
 - **MySQL 8.0**
-- **Django Filter**
-- **DRF YASG (Swagger文档)**
-- **Docker** (可选)
-- **Gunicorn** (生产环境)
+- **Gunicorn** + **Docker** 生产部署
+- **drf-yasg** Swagger / ReDoc API 文档
 
 ## 项目结构
 
 ```
-minghaishiyi/
-├── minghaishiyi/          # 项目配置目录
-│   ├── __init__.py
-│   ├── settings.py        # Django配置文件
-│   ├── urls.py            # 项目URL配置
-│   ├── wsgi.py            # WSGI入口
-│   └── logging.py         # 日志配置
-├── minghub/               # 主应用目录
-│   ├── __init__.py
-│   ├── models.py          # 数据模型
-│   ├── views.py           # 视图函数
-│   ├── urls.py            # 应用URL配置
-│   ├── serializers.py     # 序列化器
-│   ├── exceptions.py      # 异常处理
-│   └── migrations/        # 数据库迁移文件
-├── manage.py              # Django管理脚本
-├── requirements.txt       # 项目依赖
-├── Dockerfile             # Docker配置
-└── docker-compose.yml     # Docker Compose配置
+minghaishiyi_backend/
+├── minghaishiyi/              # Django 项目配置
+│   ├── settings.py            # 全局配置（数据库、DRF、国际化）
+│   ├── urls.py                # 根路由
+│   ├── wsgi.py                # Gunicorn 入口
+│   └── logging.py             # 日志配置
+├── minghub/                   # 主应用
+│   ├── models.py              # DestinyCase 数据模型
+│   ├── views.py               # ViewSet + Serializer + Filter
+│   ├── admin.py               # Django Admin 配置
+│   ├── exceptions.py          # 自定义异常处理
+│   └── management/commands/
+│       └── import_excel.py    # Excel 批量导入命令
+├── cli/                       # CLI 爬虫工具
+│   ├── main.py                # 微信文章抓取 + DeepSeek 提取
+│   └── urls.txt               # 待抓取文章 URL
+├── manage.py
+├── requirements.txt
+├── Dockerfile
+└── docker-compose.yml
 ```
 
-## 安装和运行
+## 快速开始
 
 ### 环境要求
 
 - Python 3.12
 - MySQL 8.0
 
-### 安装步骤
+### 本地运行
 
-1. **克隆项目**
-
-   ```bash
-git clone <项目地址>
-cd minghaishiyi
-```
-
-2. **创建虚拟环境**
-
-   ```bash
+```bash
+# 创建虚拟环境
 python -m venv venv
-# Windows
-venv\Scripts\activate
-# Linux/Mac
-source venv/bin/activate
-```
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-3. **安装依赖**
-
-   ```bash
+# 安装依赖
 pip install -r requirements.txt
-```
 
-4. **配置数据库**
+# 配置环境变量（复制 .env.example 为 .env 并填写）
+cp .env.example .env
 
-   在 `minghaishiyi/settings.py` 中配置数据库连接：
-
-   ```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'minghaishiyi',
-        'USER': 'root',
-        'PASSWORD': 'your_password',
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-    }
-}
-```
-
-5. **执行数据库迁移**
-
-   ```bash
+# 执行数据库迁移
 python manage.py migrate
-```
 
-6. **导入数据** (可选)
-
-   ```bash
-python manage.py loaddata <data_file>
-```
-
-7. **运行开发服务器**
-
-   ```bash
+# 启动开发服务器
 python manage.py runserver
 ```
 
-   访问 `http://localhost:8000` 查看应用
-
-### 生产环境部署
-
-#### 使用Gunicorn
+### Docker 部署
 
 ```bash
-gunicorn minghaishiyi.wsgi:application --bind 0.0.0.0:8000 --workers 4
-```
-
-#### 使用Docker
-
-1. **构建并运行容器**
-
-   ```bash
 docker-compose up -d
-```
-
-2. **执行数据库迁移**
-
-   ```bash
 docker-compose exec web python manage.py migrate
 ```
 
-3. **创建超级用户** (可选)
+访问：
+- 管理后台：`http://localhost:8000/admin/`
+- API 文档：`http://localhost:8000/swagger/`
 
-   ```bash
-docker-compose exec web python manage.py createsuperuser
-```
+## API 接口
 
-## API文档
+### 命例数据 `/api/destiny-cases/`
 
-项目集成了Swagger文档，访问以下地址查看API接口：
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/destiny-cases/` | 列表查询（支持分页、过滤） |
+| GET | `/api/destiny-cases/{id}/` | 单条详情 |
+| POST | `/api/destiny-cases/` | 新增命例（需密码验证） |
 
-- Swagger UI: `http://localhost:8000/swagger/`
-- ReDoc: `http://localhost:8000/redoc/`
+**过滤参数**（均支持模糊匹配）：
 
-## API接口
+`gender` `year_ganzhi` `month_ganzhi` `day_ganzhi` `hour_ganzhi` `source` `label`
 
-### 命例数据接口
+**分页参数**：`page`（默认 1）、`page_size`（默认 20，最大 100）
 
-#### 获取命例列表
-
-```
-GET /api/destiny-cases/
-```
-
-**参数：**
-- `page`: 页码 (默认: 1)
-- `page_size`: 每页数量 (默认: 20, 最大: 100)
-- `search`: 搜索关键词 (支持年、月、日、时干支，来源，标签，反馈)
-- `source`: 来源过滤
-- `gender`: 性别过滤
-- `year_ganzhi`: 年干支过滤
-- `month_ganzhi`: 月干支过滤
-- `day_ganzhi`: 日干支过滤
-- `hour_ganzhi`: 时干支过滤
-- `label`: 标签过滤
-
-#### 获取单个命例
+### 新增命例
 
 ```
-GET /api/destiny-cases/<id>/
-```
+POST /api/destiny-cases/
+Content-Type: application/json
 
-## 异常处理
-
-系统实现了统一的异常处理机制，主要处理404错误，返回格式如下：
-
-```json
 {
-    "status": "error",
-    "code": "not_found",
-    "message": "请求的资源不存在"
+    "passwd": "minghaishiyi",
+    "source": "铁口擂台",
+    "gender": 1,
+    "year_ganzhi": "庚午",
+    "month_ganzhi": "戊寅",
+    "day_ganzhi": "己丑",
+    "hour_ganzhi": "辛未",
+    "feedback": "...",
+    "label": "..."
 }
 ```
 
-## 日志配置
+## 数据模型
 
-项目使用Django的日志系统，日志文件位于 `logs/` 目录下：
-- `django.log`: Django系统日志
-- `api_errors.log`: API错误日志
+### DestinyCase
 
-## 注意事项
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `source` | CharField | 命例来源 |
+| `gender` | SmallIntegerField | 1=乾造（男），0=坤造（女） |
+| `year_ganzhi` | CharField | 年柱（如 庚午） |
+| `month_ganzhi` | CharField | 月柱（如 戊寅） |
+| `day_ganzhi` | CharField | 日柱（如 己丑） |
+| `hour_ganzhi` | CharField | 时柱（如 辛未） |
+| `feedback` | TextField | 命例反馈（可选） |
+| `original_url` | URLField | 原文链接（可选） |
+| `label` | CharField | 标签（可选） |
 
-1. 首次运行前请确保已正确配置数据库连接
-2. 生产环境建议使用Gunicorn或其他WSGI服务器，不要使用Django开发服务器
-3. 定期备份数据库
-4. 根据实际需求调整日志级别和保留策略
+## CLI 工具
+
+`cli/main.py` 独立于 Web 应用运行，用于从微信公众号文章批量提取命例：
+
+```bash
+# 设置 DeepSeek API Key
+export DEEPSEEK_API_KEY=your-key
+
+# 编辑 urls.txt 放入微信文章链接，然后运行
+python cli/main.py
+```
+
+结果保存到 `cli/cases.csv`。
+
+## Excel 批量导入
+
+```bash
+# 将 Excel 文件放在 mingdata/命海拾遗-命例库.xlsx，然后运行
+python manage.py import_excel
+```
+
+## 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `SECRET_KEY` | Django 密钥 | — |
+| `DEBUG` | 调试模式 | True |
+| `DB_ENGINE` | 数据库引擎 | django.db.backends.mysql |
+| `DB_NAME` | 数据库名 | minghaishiyi |
+| `DB_USER` | 数据库用户 | root |
+| `DB_PASSWORD` | 数据库密码 | — |
+| `DB_HOST` | 数据库主机 | 1.1.1.1 |
+| `DB_PORT` | 数据库端口 | 3306 |
+| `DEEPSEEK_API_KEY` | DeepSeek API Key（CLI） | — |
 
 ## 许可证
 
