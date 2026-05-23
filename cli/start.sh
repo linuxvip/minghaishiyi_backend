@@ -1,0 +1,1 @@
+/root/venv/minghaishiyi_venv/bin/python3 main.py
