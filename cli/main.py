@@ -7,26 +7,28 @@ import httpx
 from bs4 import BeautifulSoup
 from typing import Dict, List
 from openai import OpenAI
+from dotenv import dotenv_values
 
+# ==================== 配置区域（从项目根目录 .env 文件读取） ====================
 
-# ==================== 配置区域 ====================
+_cfg = dotenv_values(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
 # 1. API 配置
-DEEPSEEK_API_KEY = "sk-5c65faaab92d4b1f930cac6dcf6e292b"  # 替换为你的 API Key
-DEEPSEEK_API_URL = "https://api.deepseek.com"
+DEEPSEEK_API_KEY = _cfg.get("DEEPSEEK_API_KEY", "")
+DEEPSEEK_API_URL = _cfg.get("DEEPSEEK_API_URL", "https://api.deepseek.com")
 
 # 命海拾遗API新增接口
-MHSY_URL = "http://101.200.89.198:8000/api/destiny-cases/"
+MHSY_URL = _cfg.get("MHSY_URL", "")
+MHSY_PASSWD = _cfg.get("MHSY_PASSWD", "minghaishiyi")
 
 # 2. 文件配置
-INPUT_FILE = "urls.txt"      # 存放链接的文件，每行一个 URL
-OUTPUT_FILE = "cases.csv"    # 命例输出文件路径
-SOURCE_NAME = "铁口擂台"      # 数据来源名称
-# SOURCE_NAME = "佳佳国学擂台"      # 数据来源名称
+INPUT_FILE = _cfg.get("CLI_INPUT_FILE", "urls.txt")
+OUTPUT_FILE = _cfg.get("CLI_OUTPUT_FILE", "cases.csv")
+SOURCE_NAME = _cfg.get("CLI_SOURCE_NAME", "铁口擂台")
 
 # 3. 日志配置
-LOG_LEVEL = logging.INFO
-LOG_FILE = "app.log"
+LOG_LEVEL = getattr(logging, _cfg.get("CLI_LOG_LEVEL", "INFO").upper(), logging.INFO)
+LOG_FILE = _cfg.get("CLI_LOG_FILE", "app.log")
 
 
 # ==================== 核心类 ====================
@@ -163,8 +165,10 @@ def save_to_csv(results: List[Dict], output_file: str):
 
 def send_record_to_api(
     source, gender, year_ganzhi, month_ganzhi, day_ganzhi, hour_ganzhi,
-    feedback, passwd="minghaishiyi"
+    feedback, passwd=None
 ):
+    if passwd is None:
+        passwd = MHSY_PASSWD
     ## 接入导入格式
     record = {
         "source": source,
@@ -186,6 +190,13 @@ def main():
     setup_logging()
     logging.info("=" * 50)
     logging.info("微信文章命理信息提取工具启动")
+
+    if not DEEPSEEK_API_KEY:
+        logging.error("未设置 DEEPSEEK_API_KEY 环境变量")
+        return
+    if not MHSY_URL:
+        logging.error("未设置 MHSY_URL 环境变量")
+        return
 
     # 检查输入文件
     if not os.path.exists(INPUT_FILE):
