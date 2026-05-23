@@ -12,14 +12,14 @@ services:
       - db
     environment:
       - DJANGO_SETTINGS_MODULE=minghaishiyi.settings
-      - DATABASE_URL=mysql://root:qq525277891..@db:3306/minghaishiyi
+      - DATABASE_URL=mysql://root:123456@db:3306/minghaishiyi
 
   db:
     image: mysql:8.0
     volumes:
       - mysql_data:/var/lib/mysql
     environment:
-      - MYSQL_ROOT_PASSWORD=qq525277891..
+      - MYSQL_ROOT_PASSWORD=123456
       - MYSQL_DATABASE=minghaishiyi
     ports:
       - "3306:3306"

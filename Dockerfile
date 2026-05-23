@@ -36,7 +36,7 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 COPY . .
 
 # 暴露端口
-EXPOSE 8000
+EXPOSE 7777
 
 # 运行 Gunicorn
 CMD ["gunicorn", "minghaishiyi.wsgi:application", "--bind", "0.0.0.0:7777", "--workers", "4"]
