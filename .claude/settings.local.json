@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"http://127.0.0.1:8001/api/destiny-cases/?chusheng=%E5%86%9C%E6%9D%91%E6%99%AE%E9%80%9A%E5%AE%B6%E5%BA%AD&page_size=2\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('count:', d['count']\\); [print\\(r['label'][:80]\\) for r in d['results']]\")",
+      "Bash(curl -s \"http://127.0.0.1:8001/api/destiny-cases/?source=%E9%93%81%E5%8F%A3%E6%93%82%E5%8F%B0&xueli=%E6%9C%AC%E7%A7%91&page_size=2\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('count:', d['count']\\); [print\\(r['id'], r['source'], json.loads\\(r['label']\\).get\\('学历'\\)\\) for r in d['results']]\")",
+      "Bash(curl -s \"http://127.0.0.1:8001/api/destiny-cases/?zhiye_leibie=%E7%BB%8F%E5%95%86&page_size=2\")",
+      "Bash(python -c \"import sys; print\\(sys.stdin.read\\(\\)[:400]\\)\")"
+    ]
+  }
+}
