@@ -32,6 +32,14 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = ["101.200.89.198", "172.19.77.65", "*"]
 
+# 信任 Nginx 代理转发的请求（CSRF 校验需要）
+CSRF_TRUSTED_ORIGINS = [
+    "http://minghaishiyi.cn:8000",
+    "http://101.200.89.198:8000",
+]
+
+USE_X_FORWARDED_HOST = True
+
 
 # Application definition
 
