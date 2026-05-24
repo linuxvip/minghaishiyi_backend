@@ -36,6 +36,7 @@ ALLOWED_HOSTS = ["101.200.89.198", "172.19.77.65", "*"]
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -87,10 +88,18 @@ WSGI_APPLICATION = 'minghaishiyi.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+_db_engine = os.getenv('DB_ENGINE', 'django.db.backends.mysql')
+
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
+        'ENGINE': _db_engine,
         'NAME': os.getenv('DB_NAME', 'minghaishiyi'),
+    }
+}
+
+# MySQL 需要额外的连接参数
+if 'mysql' in _db_engine:
+    DATABASES['default'].update({
         'USER': os.getenv('DB_USER', 'root'),
         'PASSWORD': os.getenv('DB_PASSWORD', '123456'),
         'HOST': os.getenv('DB_HOST', '1.1.1.1'),
@@ -98,8 +107,7 @@ DATABASES = {
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
-    }
-}
+    })
 
 
 # Password validation
@@ -137,6 +145,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -161,3 +170,78 @@ REST_FRAMEWORK = {
 # 使用自定义的日志配置
 from .logging import LOGGING
 LOGGING = LOGGING
+
+# ==================== Jazzmin 配置 ====================
+
+JAZZMIN_SETTINGS = {
+    "site_title": "命海拾遗",
+    "site_header": "命海拾遗后台管理",
+    "site_brand": "命海拾遗",
+    "site_logo": None,
+    "welcome_sign": "欢迎使用命海拾遗后台管理系统",
+    "copyright": "命海拾遗",
+    "user_avatar": None,
+
+    # 顶部导航
+    "topmenu_links": [
+        {"name": "首页", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "API文档", "url": "/swagger/", "new_window": True},
+        {"app": "minghub"},
+    ],
+
+    # 侧边栏
+    "show_sidebar": True,
+    "navigation_expanded": True,
+
+    # 模型图标映射
+    "icons": {
+        "minghub.DestinyCase": "fas fa-yin-yang",
+        "auth.Group": "fas fa-users",
+        "auth.User": "fas fa-user",
+    },
+
+    # 自定义 CSS/JS
+    "custom_css": None,
+    "custom_js": None,
+
+    # UI 选项
+    "show_ui_builder": False,
+    "changeform_format": "horizontal_tabs",
+    "related_modal_active": True,
+
+    # 搜索模型
+    "search_model": ["minghub.DestinyCase"],
+
+    # 深色模式
+    "dark_mode_theme": "darkly",
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-dark",
+    "accent": "accent-primary",
+    "navbar": "navbar-white navbar-light",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+}

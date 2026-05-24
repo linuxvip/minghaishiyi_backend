@@ -12,7 +12,12 @@ services:
       - db
     environment:
       - DJANGO_SETTINGS_MODULE=minghaishiyi.settings
-      - DATABASE_URL=mysql://root:123456@db:3306/minghaishiyi
+      - DB_ENGINE=django.db.backends.mysql
+      - DB_NAME=minghaishiyi
+      - DB_USER=root
+      - DB_PASSWORD=123456
+      - DB_HOST=db
+      - DB_PORT=3306
 
   db:
     image: mysql:8.0
