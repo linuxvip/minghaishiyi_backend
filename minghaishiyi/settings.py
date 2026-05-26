@@ -44,12 +44,10 @@ USE_X_FORWARDED_HOST = True
 # Application definition
 
 INSTALLED_APPS = [
-    'jazzmin',
-    'django.contrib.admin',
+    'rest_framework_simplejwt.token_blacklist',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
-    'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
     'django_filters',
@@ -69,7 +67,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -84,7 +81,6 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
             ],
         },
     },
@@ -173,83 +169,24 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
         'rest_framework.parsers.MultiPartParser',
     ],
+
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
 }
 
 # 使用自定义的日志配置
 from .logging import LOGGING
 LOGGING = LOGGING
 
-# ==================== Jazzmin 配置 ====================
+# ==================== JWT 认证配置 ====================
+from datetime import timedelta
 
-JAZZMIN_SETTINGS = {
-    "site_title": "命海拾遗",
-    "site_header": "命海拾遗后台管理",
-    "site_brand": "命海拾遗",
-    "site_logo": None,
-    "welcome_sign": "欢迎使用命海拾遗后台管理系统",
-    "copyright": "命海拾遗",
-    "user_avatar": None,
-
-    # 顶部导航
-    "topmenu_links": [
-        {"name": "首页", "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "API文档", "url": "/swagger/", "new_window": True},
-        {"app": "minghub"},
-    ],
-
-    # 侧边栏
-    "show_sidebar": True,
-    "navigation_expanded": True,
-
-    # 模型图标映射
-    "icons": {
-        "minghub.DestinyCase": "fas fa-yin-yang",
-        "auth.Group": "fas fa-users",
-        "auth.User": "fas fa-user",
-    },
-
-    # 自定义 CSS/JS
-    "custom_css": None,
-    "custom_js": None,
-
-    # UI 选项
-    "show_ui_builder": False,
-    "changeform_format": "horizontal_tabs",
-    "related_modal_active": True,
-
-    # 搜索模型
-    "search_model": ["minghub.DestinyCase"],
-
-    # 深色模式
-    "dark_mode_theme": "darkly",
-}
-
-JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": False,
-    "footer_small_text": False,
-    "body_small_text": False,
-    "brand_small_text": False,
-    "brand_colour": "navbar-dark",
-    "accent": "accent-primary",
-    "navbar": "navbar-white navbar-light",
-    "no_navbar_border": False,
-    "navbar_fixed": True,
-    "footer_fixed": False,
-    "sidebar_fixed": True,
-    "sidebar": "sidebar-dark-primary",
-    "sidebar_nav_small_text": False,
-    "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": False,
-    "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": False,
-    "sidebar_nav_flat_style": False,
-    "theme": "default",
-    "button_classes": {
-        "primary": "btn-primary",
-        "secondary": "btn-secondary",
-        "info": "btn-info",
-        "warning": "btn-warning",
-        "danger": "btn-danger",
-        "success": "btn-success",
-    },
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }

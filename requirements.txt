@@ -8,4 +8,4 @@ django-filter==24.2
 drf-yasg==1.21.11
 setuptools>=65.0.0
 python-dotenv>=1.0.0
-django-jazzmin>=3.0
+djangorestframework-simplejwt==5.4.0
