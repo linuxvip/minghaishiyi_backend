@@ -23,6 +23,7 @@ class DestinyCase(models.Model):
     updated_time = models.DateTimeField(auto_now=True, verbose_name="修改时间")
 
     class Meta:
+        ordering = ["id"]
         verbose_name = "命例"
         verbose_name_plural = verbose_name
 
