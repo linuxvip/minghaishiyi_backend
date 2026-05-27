@@ -9,6 +9,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.contrib.auth.models import User, Group
 
+import csv
+from django.http import HttpResponse
 from minghub.models import DestinyCase
 from minghub.views import DestinyCaseFilter, DestinyCasePagination
 from .serializers import (
@@ -51,6 +53,38 @@ class AdminDestinyCaseViewSet(viewsets.ModelViewSet):
     ordering_fields = ['id', 'source', 'created_time', 'updated_time']
     ordering = ['-created_time']
     pagination_class = DestinyCasePagination
+
+    @action(detail=False, methods=['get'], url_path='export-csv')
+    def export_csv(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="minghaishiyi-cases.csv"'
+        response.write('\ufeff')
+
+        writer = csv.writer(response)
+        writer.writerow([
+            'ID', '来源', '性别', '年柱', '月柱', '日柱', '时柱',
+            '反馈', '原文链接', '标签', '添加时间', '修改时间'
+        ])
+
+        for case in queryset.iterator(chunk_size=1000):
+            writer.writerow([
+                case.id,
+                case.source,
+                '男' if case.gender == 1 else '女',
+                case.year_ganzhi,
+                case.month_ganzhi,
+                case.day_ganzhi,
+                case.hour_ganzhi,
+                case.feedback or '',
+                case.original_url or '',
+                case.label or '',
+                case.created_time.strftime('%Y-%m-%d %H:%M:%S') if case.created_time else '',
+                case.updated_time.strftime('%Y-%m-%d %H:%M:%S') if case.updated_time else '',
+            ])
+
+        return response
 
 
 class StandardPagination(PageNumberPagination):
