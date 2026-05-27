@@ -54,9 +54,13 @@ COPY --from=builder /usr/local/bin/gunicorn /usr/local/bin/gunicorn
 # 复制项目文件（.dockerignore 生效）
 COPY . .
 
+# 复制并设置启动脚本权限
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
 # 收集静态文件
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 7777
 
-CMD ["gunicorn", "minghaishiyi.wsgi:application", "--bind", "0.0.0.0:7777", "--workers", "4"]
+CMD ["./entrypoint.sh"]
