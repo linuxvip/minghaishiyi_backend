@@ -1,0 +1,57 @@
+# Git
+.git/
+.gitignore
+
+# Python 字节码
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# 敏感配置
+.env
+.env.*
+
+# CLI 工具（独立运行，Web 镜像不需要）
+cli/
+
+# 数据文件
+mingdata/
+*.csv
+urls.txt
+
+# 日志
+logs/
+*.log
+
+# IDE / 编辑器
+.idea/
+.vscode/
+.claude/
+*.swp
+
+# Docker 自身
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 文档
+docs/
+README.md
+
+# Nginx 配置
+nginx.conf
+
+# 测试
+tests/
+
+# 前端项目
+minghaishiyi_frontend/
+
+# 临时文件
+*.tmp
+tmp/
