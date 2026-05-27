@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'minghub',
+    'articles',
     'drf_yasg',
 ]
 # Default primary key field type
