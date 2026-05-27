@@ -11,7 +11,10 @@ from django.contrib.auth.models import User, Group
 
 import csv
 from django.http import HttpResponse
-from minghub.models import DestinyCase
+import json
+import json
+from rest_framework import serializers as drf_serializers
+from minghub.models import DestinyCase, AuditLog, SystemConfig
 from minghub.views import DestinyCaseFilter, DestinyCasePagination
 from .serializers import (
     AdminDestinyCaseSerializer,
@@ -86,6 +89,8 @@ class AdminDestinyCaseViewSet(viewsets.ModelViewSet):
 
         return response
 
+        return response
+
 
 class StandardPagination(PageNumberPagination):
     page_size = 50
@@ -128,4 +133,54 @@ class GroupViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsSuperUser]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
+    pagination_class = StandardPagination
+
+
+class UploadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        f = request.FILES.get("file")
+        if not f: return Response({"error":"no file"}, status=400)
+        import os
+        d = os.path.join("/app/uploads", f.name)
+        os.makedirs(os.path.dirname(d), exist_ok=True)
+        with open(d, "wb+") as dest:
+            for chunk in f.chunks():
+                dest.write(chunk)
+        return Response({"url": "/data/" + f.name})
+
+class SystemConfigView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        configs = {c.key: c.value for c in SystemConfig.objects.all()}
+        defaults = {"site_name": "命海拾遗", "site_subtitle": "探索八字玄机 · 洞悉人生运势", "footer_text": "Ming Hai Shi Yi · 命海拾遗", "qrcode_url": "/qrcode.jpg", "avatar_url": "/avatar.jpg", "wx_qrcode_url": "/wx_qrcode.jpg"}
+        for k, v in defaults.items():
+            if k not in configs:
+                configs[k] = v
+        return Response(configs)
+
+    def put(self, request):
+        for key, value in request.data.items():
+            SystemConfig.objects.update_or_create(key=key, defaults={"value": str(value)})
+        return Response({"status": "ok"})
+
+
+class AuditLogSerializer(drf_serializers.ModelSerializer):
+    user_name = drf_serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = AuditLog
+        fields = ['id', 'user', 'user_name', 'action', 'model_name', 'object_id', 'changes', 'timestamp']
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = AuditLog.objects.select_related('user').all()
+    serializer_class = AuditLogSerializer
+    permission_classes = [IsAuthenticated, IsSuperUser]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['user__username', 'model_name', 'changes']
+    ordering_fields = ['id', 'timestamp', 'action']
+    ordering = ['-timestamp']
     pagination_class = StandardPagination

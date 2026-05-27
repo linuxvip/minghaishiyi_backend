@@ -4,6 +4,46 @@ from minghub.models import DestinyCase
 
 
 class AdminDestinyCaseSerializer(serializers.ModelSerializer):
+    HEAVENLY_STEMS = set('甲乙丙丁戊己庚辛壬癸')
+    EARTHLY_BRANCHES = set('子丑寅卯辰巳午未申酉戌亥')
+
+    PILLAR_FIELDS = ['year_ganzhi', 'month_ganzhi', 'day_ganzhi', 'hour_ganzhi']
+    PILLAR_NAMES = {
+        'year_ganzhi': '年柱', 'month_ganzhi': '月柱',
+        'day_ganzhi': '日柱', 'hour_ganzhi': '时柱',
+    }
+
+    def _validate_pillar(self, value, field_name):
+        if not value or len(value) != 2:
+            raise serializers.ValidationError(
+                f'{self.PILLAR_NAMES[field_name]}格式应为"甲子"（2个汉字）'
+            )
+        gan, zhi = value[0], value[1]
+        if gan not in self.HEAVENLY_STEMS:
+            raise serializers.ValidationError(
+                f'{self.PILLAR_NAMES[field_name]}："{gan}"不是有效天干'
+            )
+        if zhi not in self.EARTHLY_BRANCHES:
+            raise serializers.ValidationError(
+                f'{self.PILLAR_NAMES[field_name]}："{zhi}"不是有效地支'
+            )
+
+    def validate_year_ganzhi(self, value):
+        self._validate_pillar(value, 'year_ganzhi')
+        return value
+
+    def validate_month_ganzhi(self, value):
+        self._validate_pillar(value, 'month_ganzhi')
+        return value
+
+    def validate_day_ganzhi(self, value):
+        self._validate_pillar(value, 'day_ganzhi')
+        return value
+
+    def validate_hour_ganzhi(self, value):
+        self._validate_pillar(value, 'hour_ganzhi')
+        return value
+
     class Meta:
         model = DestinyCase
         fields = '__all__'

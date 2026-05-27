@@ -29,3 +29,37 @@ class DestinyCase(models.Model):
 
     def __str__(self):
         return f"{self.gender} - {self.year_ganzhi} {self.month_ganzhi} {self.day_ganzhi} {self.hour_ganzhi}"
+
+class AuditLog(models.Model):
+    ACTION_CHOICES = (
+        ('CREATE', '创建'),
+        ('UPDATE', '修改'),
+        ('DELETE', '删除'),
+    )
+
+    user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, verbose_name="操作人")
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES, verbose_name="操作类型")
+    model_name = models.CharField(max_length=50, verbose_name="模型名称")
+    object_id = models.IntegerField(verbose_name="对象ID")
+    changes = models.TextField(blank=True, default='', verbose_name="变更内容")
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="操作时间")
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = "操作日志"
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return f"[{self.get_action_display()}] {self.model_name}#{self.object_id} by {self.user}"
+
+class SystemConfig(models.Model):
+    key = models.CharField(max_length=100, unique=True, verbose_name='配置键')
+    value = models.TextField(blank=True, default='', verbose_name='配置值')
+    description = models.CharField(max_length=255, blank=True, default='', verbose_name='说明')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        verbose_name = '系统配置'
+        verbose_name_plural = verbose_name
+    def __str__(self):
+        return f'{self.key}: {self.value[:50]}'

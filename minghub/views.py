@@ -8,11 +8,23 @@ from drf_yasg.utils import swagger_auto_schema
 from django_filters import FilterSet, CharFilter
 from django.db.models import Count, Q
 from django.db.models.expressions import RawSQL
-from .models import DestinyCase
+from .models import DestinyCase, SystemConfig
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import mixins
 
 
+
+class PublicConfigView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        configs = {c.key: c.value for c in SystemConfig.objects.all()}
+        defaults = {"site_name": "命海拾遗", "site_subtitle": "探索八字玄机", "footer_text": "Ming Hai Shi Yi · 命海拾遗", "qrcode_url": "/qrcode.jpg", "avatar_url": "/avatar.jpg", "wx_qrcode_url": "/wx_qrcode.jpg"}
+        for k, v in defaults.items():
+            if k not in configs:
+                configs[k] = v
+        return Response(configs)
 class DestinyCaseFilter(FilterSet):
     """命例数据过滤器，支持四柱模糊搜索和 label JSON 内字段精确筛选"""
     year_ganzhi = CharFilter(lookup_expr='icontains')
