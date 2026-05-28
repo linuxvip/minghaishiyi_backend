@@ -105,3 +105,7 @@ docker-compose.override.yml
 *.temp
 .tmp/
 .temp/
+
+# CLI output
+cli/cases.csv
+cli/urls.txt
