@@ -90,6 +90,31 @@ class UserCaseViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return UserCase.objects.filter(user=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        v = serializer.validated_data
+        lookup = {
+            'gender': v.get('gender'),
+            'year_ganzhi': v.get('year_ganzhi'),
+            'month_ganzhi': v.get('month_ganzhi'),
+            'day_ganzhi': v.get('day_ganzhi'),
+            'hour_ganzhi': v.get('hour_ganzhi'),
+        }
+        existing = UserCase.objects.filter(user=request.user, **lookup).first()
+        if existing:
+            for field in ('subject_name', 'notes', 'input_snapshot'):
+                if field in v:
+                    setattr(existing, field, v[field])
+            existing.save()
+            data = self.get_serializer(existing).data
+            data['created'] = False
+            return Response(data, status=status.HTTP_200_OK)
+        user_case = serializer.save(user=request.user)
+        data = self.get_serializer(user_case).data
+        data['created'] = True
+        return Response(data, status=status.HTTP_201_CREATED)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
