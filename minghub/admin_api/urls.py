@@ -1,7 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
+    AdminLoginView,
     LogoutView,
     CurrentUserView,
     AdminDestinyCaseViewSet,
@@ -19,7 +20,7 @@ router.register(r'groups', GroupViewSet, basename='admin-group')
 router.register(r'audit-logs', AuditLogViewSet, basename='admin-audit-log')
 
 urlpatterns = [
-    path('auth/login/', TokenObtainPairView.as_view(), name='admin-auth-login'),
+    path('auth/login/', AdminLoginView.as_view(), name='admin-auth-login'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='admin-auth-refresh'),
     path('auth/logout/', LogoutView.as_view(), name='admin-auth-logout'),
     path('auth/me/', CurrentUserView.as_view(), name='admin-auth-me'),

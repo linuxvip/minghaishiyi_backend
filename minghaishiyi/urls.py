@@ -36,6 +36,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('api/', include('minghub.urls')),
     path('api/articles/', include('articles.urls')),
+    path('api/', include('userapi.urls')),
     path('admin-api/', include('minghub.admin_api.urls')),
     path('admin-api/articles/', include('articles.admin_urls')),
     # Swagger文档URL

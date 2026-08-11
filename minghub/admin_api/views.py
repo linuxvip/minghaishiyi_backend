@@ -2,18 +2,21 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.tokens import RefreshToken
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.contrib.auth.models import User, Group
+from django.contrib.auth import authenticate
 
 import csv
 from django.http import HttpResponse
 import json
 import json
 from rest_framework import serializers as drf_serializers
+from django.core.cache import cache
+from minghub.views import CONFIG_CACHE_KEY
 from minghub.models import DestinyCase, AuditLog, SystemConfig
 from minghub.views import DestinyCaseFilter, DestinyCasePagination
 from .serializers import (
@@ -23,6 +26,27 @@ from .serializers import (
     GroupSerializer,
 )
 from .permissions import IsSuperUser
+
+
+class AdminLoginView(APIView):
+    """后台登录：仅允许超级管理员"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username', '').strip()
+        password = request.data.get('password', '')
+        user = authenticate(username=username, password=password)
+        if not user:
+            return Response({'detail': '用户名或密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
+        if not user.is_active:
+            return Response({'detail': '账号已被禁用'}, status=status.HTTP_401_UNAUTHORIZED)
+        if not user.is_superuser:
+            return Response({'detail': '无后台管理权限'}, status=status.HTTP_403_FORBIDDEN)
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        })
 
 
 class LogoutView(APIView):
@@ -38,7 +62,7 @@ class LogoutView(APIView):
 
 
 class CurrentUserView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSuperUser]
 
     def get(self, request):
         serializer = UserSerializer(request.user)
@@ -48,7 +72,7 @@ class CurrentUserView(APIView):
 class AdminDestinyCaseViewSet(viewsets.ModelViewSet):
     queryset = DestinyCase.objects.all()
     serializer_class = AdminDestinyCaseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSuperUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = DestinyCaseFilter
     search_fields = ['source', 'year_ganzhi', 'month_ganzhi', 'day_ganzhi',
@@ -137,7 +161,7 @@ class GroupViewSet(viewsets.ModelViewSet):
 
 
 class UploadView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSuperUser]
 
     def post(self, request):
         f = request.FILES.get("file")
@@ -151,7 +175,7 @@ class UploadView(APIView):
         return Response({"url": "/data/" + f.name})
 
 class SystemConfigView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSuperUser]
 
     def get(self, request):
         configs = {c.key: c.value for c in SystemConfig.objects.all()}
@@ -164,6 +188,7 @@ class SystemConfigView(APIView):
     def put(self, request):
         for key, value in request.data.items():
             SystemConfig.objects.update_or_create(key=key, defaults={"value": str(value)})
+        cache.delete(CONFIG_CACHE_KEY)
         return Response({"status": "ok"})
 
 

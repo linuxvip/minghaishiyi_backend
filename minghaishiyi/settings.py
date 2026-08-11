@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'minghub',
     'articles',
+    'userapi',
     'drf_yasg',
 ]
 # Default primary key field type
@@ -100,6 +101,14 @@ DATABASES = {
     'default': {
         'ENGINE': _db_engine,
         'NAME': os.getenv('DB_NAME', 'minghaishiyi'),
+    }
+}
+
+# 共享缓存（跨 gunicorn worker）：配置、来源列表等低频数据
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache_table',
     }
 }
 

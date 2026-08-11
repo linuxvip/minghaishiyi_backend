@@ -4,6 +4,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework import filters
 from .models import Article
 from .serializers import AdminArticleSerializer
+from minghub.admin_api.permissions import IsSuperUser
 
 
 class ArticlePagination(PageNumberPagination):
@@ -16,7 +17,7 @@ class AdminArticleViewSet(viewsets.ModelViewSet):
     """管理端文章 CRUD"""
     queryset = Article.objects.all()
     serializer_class = AdminArticleSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSuperUser]
     pagination_class = ArticlePagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'summary', 'category', 'source', 'tags']

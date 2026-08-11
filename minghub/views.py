@@ -8,23 +8,34 @@ from drf_yasg.utils import swagger_auto_schema
 from django_filters import FilterSet, CharFilter
 from django.db.models import Count, Q
 from django.db.models.expressions import RawSQL
+from django.core.cache import cache
 from .models import DestinyCase, SystemConfig
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import mixins
 
 
+CONFIG_CACHE_KEY = 'public_system_configs'
+CONFIG_CACHE_TTL = 300  # 5 分钟
+SOURCES_CACHE_KEY = 'destiny_case_sources'
+SOURCES_CACHE_TTL = 3600  # 1 小时
+
 
 class PublicConfigView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        configs = {c.key: c.value for c in SystemConfig.objects.all()}
-        defaults = {"site_name": "命海拾遗", "site_subtitle": "探索八字玄机", "footer_text": "Ming Hai Shi Yi · 命海拾遗", "qrcode_url": "/qrcode.jpg", "avatar_url": "/avatar.jpg", "wx_qrcode_url": "/wx_qrcode.jpg"}
-        for k, v in defaults.items():
-            if k not in configs:
-                configs[k] = v
-        return Response(configs)
+        configs = cache.get(CONFIG_CACHE_KEY)
+        if configs is None:
+            configs = {c.key: c.value for c in SystemConfig.objects.all()}
+            defaults = {"site_name": "命海拾遗", "site_subtitle": "探索八字玄机", "footer_text": "Ming Hai Shi Yi · 命海拾遗", "qrcode_url": "/qrcode.jpg", "avatar_url": "/avatar.jpg", "wx_qrcode_url": "/wx_qrcode.jpg"}
+            for k, v in defaults.items():
+                if k not in configs:
+                    configs[k] = v
+            cache.set(CONFIG_CACHE_KEY, configs, CONFIG_CACHE_TTL)
+        resp = Response(configs)
+        resp['Cache-Control'] = f'public, max-age={CONFIG_CACHE_TTL}'
+        return resp
 class DestinyCaseFilter(FilterSet):
     """命例数据过滤器，支持四柱模糊搜索和 label JSON 内字段精确筛选"""
     year_ganzhi = CharFilter(lookup_expr='icontains')
@@ -115,15 +126,18 @@ class DestinyCaseViewSet(
     )
     @action(detail=False, methods=['get'], url_path='sources')
     def sources(self, request):
-        sources = (
-            DestinyCase.objects
-            .exclude(Q(source='') | Q(source__isnull=True))
-            .values('source')
-            .annotate(count=Count('source'))
-            .order_by('-count')
-            .values_list('source', flat=True)
-        )
-        return Response({"sources": list(sources)})
+        sources = cache.get(SOURCES_CACHE_KEY)
+        if sources is None:
+            sources = list(
+                DestinyCase.objects
+                .exclude(Q(source='') | Q(source__isnull=True))
+                .values('source')
+                .annotate(count=Count('source'))
+                .order_by('-count')
+                .values_list('source', flat=True)
+            )
+            cache.set(SOURCES_CACHE_KEY, sources, SOURCES_CACHE_TTL)
+        return Response({"sources": sources})
 
     @swagger_auto_schema(
         operation_description='获取特定命例数据的详细信息',
@@ -131,7 +145,9 @@ class DestinyCaseViewSet(
     )
     def retrieve(self, request, *args, **kwargs):
         """获取单个命例数据"""
-        return super().retrieve(request, *args, **kwargs)
+        resp = super().retrieve(request, *args, **kwargs)
+        resp['Cache-Control'] = 'public, max-age=60'
+        return resp
     
     @swagger_auto_schema(
         operation_description='获取命例数据列表，支持分页、过滤和搜索',
@@ -139,7 +155,9 @@ class DestinyCaseViewSet(
     )
     def list(self, request, *args, **kwargs):
         """获取命例数据列表"""
-        return super().list(request, *args, **kwargs)
+        resp = super().list(request, *args, **kwargs)
+        resp['Cache-Control'] = 'public, max-age=60'
+        return resp
 
     @swagger_auto_schema(
         operation_description='新增命例数据记录（需要passwd参数）',
@@ -154,4 +172,6 @@ class DestinyCaseViewSet(
         password = request.data.get('passwd', '')
         if password != 'minghaishiyi':
             return Response({"error": "密码错误"}, status=401)
-        return super().create(request, *args, **kwargs)
+        resp = super().create(request, *args, **kwargs)
+        cache.delete(SOURCES_CACHE_KEY)
+        return resp
