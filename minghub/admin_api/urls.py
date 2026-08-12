@@ -11,6 +11,7 @@ from .views import (
     AuditLogViewSet,
     UploadView,
     SystemConfigView,
+    ProcessingTaskViewSet,
 )
 
 router = DefaultRouter()
@@ -18,6 +19,7 @@ router.register(r'destiny-cases', AdminDestinyCaseViewSet, basename='admin-desti
 router.register(r'users', UserViewSet, basename='admin-user')
 router.register(r'groups', GroupViewSet, basename='admin-group')
 router.register(r'audit-logs', AuditLogViewSet, basename='admin-audit-log')
+router.register(r'tasks', ProcessingTaskViewSet, basename='admin-processing-task')
 
 urlpatterns = [
     path('auth/login/', AdminLoginView.as_view(), name='admin-auth-login'),

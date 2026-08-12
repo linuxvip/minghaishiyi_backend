@@ -1,7 +1,5 @@
 from django.db import models
 
-# Create your models here.
-
 class DestinyCase(models.Model):
     objects = models.Manager()
 
@@ -63,3 +61,29 @@ class SystemConfig(models.Model):
         verbose_name_plural = verbose_name
     def __str__(self):
         return f'{self.key}: {self.value[:50]}'
+
+
+class ProcessingTask(models.Model):
+    STATUS_CHOICES = [
+        ('pending', '待处理'),
+        ('processing', '处理中'),
+        ('done', '已完成'),
+        ('failed', '失败'),
+    ]
+
+    url = models.TextField(verbose_name="微信文章链接")
+    source_name = models.CharField(max_length=255, verbose_name="来源标签")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="状态")
+    log = models.TextField(blank=True, default='', verbose_name="处理日志")
+    cases_created = models.IntegerField(default=0, verbose_name="入库命例数")
+    error_message = models.TextField(blank=True, default='', verbose_name="失败原因")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="提交时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+
+    class Meta:
+        verbose_name = "文章处理任务"
+        verbose_name_plural = verbose_name
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.get_status_display()}] {self.url[:80]}"

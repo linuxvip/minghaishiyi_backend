@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User, Group
-from minghub.models import DestinyCase
+from django_filters import rest_framework as drf_filters
+from minghub.models import DestinyCase, ProcessingTask
 
 
 class AdminDestinyCaseSerializer(serializers.ModelSerializer):
@@ -102,3 +103,31 @@ class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = ['id', 'name', 'permissions', 'user_set']
+
+
+class ProcessingTaskFilter(drf_filters.FilterSet):
+    status = drf_filters.ChoiceFilter(choices=ProcessingTask.STATUS_CHOICES)
+
+    class Meta:
+        model = ProcessingTask
+        fields = ['status']
+
+
+class ProcessingTaskSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = ProcessingTask
+        fields = '__all__'
+        read_only_fields = ['id', 'status', 'log', 'cases_created', 'error_message',
+                            'created_at', 'updated_at', 'status_display']
+
+    def validate_url(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("链接不能为空")
+        return value.strip()
+
+    def validate_source_name(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("来源标签不能为空")
+        return value.strip()

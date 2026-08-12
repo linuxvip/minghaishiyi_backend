@@ -16,14 +16,18 @@ import json
 import json
 from rest_framework import serializers as drf_serializers
 from django.core.cache import cache
+import threading
+import os
 from minghub.views import CONFIG_CACHE_KEY
-from minghub.models import DestinyCase, AuditLog, SystemConfig
+from minghub.models import DestinyCase, AuditLog, SystemConfig, ProcessingTask
 from minghub.views import DestinyCaseFilter, DestinyCasePagination
 from .serializers import (
     AdminDestinyCaseSerializer,
     UserSerializer,
     ChangePasswordSerializer,
     GroupSerializer,
+    ProcessingTaskSerializer,
+    ProcessingTaskFilter,
 )
 from .permissions import IsSuperUser
 
@@ -209,3 +213,53 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ['id', 'timestamp', 'action']
     ordering = ['-timestamp']
     pagination_class = StandardPagination
+
+
+class ProcessingTaskViewSet(viewsets.ModelViewSet):
+    queryset = ProcessingTask.objects.all()
+    serializer_class = ProcessingTaskSerializer
+    permission_classes = [IsAuthenticated, IsSuperUser]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = ProcessingTaskFilter
+    search_fields = ['url', 'source_name']
+    ordering_fields = ['id', 'status', 'source_name', 'cases_created', 'created_at', 'updated_at']
+    ordering = ['-created_at']
+    pagination_class = StandardPagination
+
+    def get_success_headers(self, data):
+        return {}
+
+    @action(detail=True, methods=['post'], url_path='process')
+    def process_task(self, request, pk=None):
+        task = self.get_object()
+
+        if task.status == 'processing':
+            return Response({'detail': '任务正在处理中，请勿重复提交'}, status=status.HTTP_409_CONFLICT)
+
+        if task.status == 'done':
+            return Response({'detail': '任务已完成，如需要可先重置为 pending'}, status=status.HTTP_409_CONFLICT)
+
+        task.status = 'processing'
+        task.error_message = ''
+        if task.log:
+            task.log += '\n' + '─' * 40 + '\n'
+        task.save(update_fields=['status', 'error_message', 'log'])
+
+        t = threading.Thread(target=_process_task_thread, args=(task.id,), daemon=True)
+        t.start()
+
+        return Response({'detail': '任务已开始处理'}, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        task = self.get_object()
+        if task.status == 'processing':
+            return Response({'detail': '任务正在处理中，无法删除'}, status=status.HTTP_409_CONFLICT)
+        return super().destroy(request, *args, **kwargs)
+
+
+def _process_task_thread(task_id: int):
+    from minghub.services.processor import process_task
+    try:
+        process_task(task_id)
+    except Exception:
+        pass
