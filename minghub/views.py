@@ -15,8 +15,29 @@ from rest_framework.response import Response
 from rest_framework import mixins
 
 
-CONFIG_CACHE_KEY = 'public_system_configs'
+# 注意：这个缓存键名带 _v2。旧键 public_system_configs 里存的是 SystemConfig 整表
+# （含 deepseek_api_key），改名可避免线上继续命中那份含密钥的旧缓存。
+CONFIG_CACHE_KEY = 'public_system_configs_v2'
 CONFIG_CACHE_TTL = 300  # 5 分钟
+
+# 公开接口只能返回这几个展示用字段，其余配置（如 deepseek_api_key）一律不下发
+PUBLIC_CONFIG_KEYS = (
+    'site_name',
+    'site_subtitle',
+    'footer_text',
+    'qrcode_url',
+    'avatar_url',
+    'wx_qrcode_url',
+)
+
+PUBLIC_CONFIG_DEFAULTS = {
+    "site_name": "命海拾遗",
+    "site_subtitle": "探索八字玄机",
+    "footer_text": "Ming Hai Shi Yi · 命海拾遗",
+    "qrcode_url": "/qrcode.jpg",
+    "avatar_url": "/avatar.jpg",
+    "wx_qrcode_url": "/wx_qrcode.jpg",
+}
 SOURCES_CACHE_KEY = 'destiny_case_sources'
 SOURCES_CACHE_TTL = 3600  # 1 小时
 
@@ -27,15 +48,17 @@ class PublicConfigView(APIView):
     def get(self, request):
         configs = cache.get(CONFIG_CACHE_KEY)
         if configs is None:
-            configs = {c.key: c.value for c in SystemConfig.objects.all()}
-            defaults = {"site_name": "命海拾遗", "site_subtitle": "探索八字玄机", "footer_text": "Ming Hai Shi Yi · 命海拾遗", "qrcode_url": "/qrcode.jpg", "avatar_url": "/avatar.jpg", "wx_qrcode_url": "/wx_qrcode.jpg"}
-            for k, v in defaults.items():
-                if k not in configs:
-                    configs[k] = v
+            stored = {
+                c.key: c.value
+                for c in SystemConfig.objects.filter(key__in=PUBLIC_CONFIG_KEYS)
+            }
+            configs = {**PUBLIC_CONFIG_DEFAULTS, **stored}
             cache.set(CONFIG_CACHE_KEY, configs, CONFIG_CACHE_TTL)
         resp = Response(configs)
         resp['Cache-Control'] = f'public, max-age={CONFIG_CACHE_TTL}'
         return resp
+
+
 class DestinyCaseFilter(FilterSet):
     """命例数据过滤器，支持四柱模糊搜索和 label JSON 内字段精确筛选"""
     year_ganzhi = CharFilter(lookup_expr='icontains')

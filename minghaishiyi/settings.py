@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # 加载.env文件中的环境变量
 load_dotenv()
@@ -24,18 +25,36 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-*#5jer$*hf0t$5=h@rssp99g_*v%l4v&1uiu9q=$h0tfx$vqz-')
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = ["101.200.89.198", "172.19.77.65", "*"]
+# SECURITY WARNING: keep the secret key used in production secret!
+# 生产环境必须由环境变量提供。绝不保留可直接使用的硬编码默认值——默认值一旦公开，
+# 任何人都能用它签出合法 JWT 冒充任意用户（含超管）登录后台。
+SECRET_KEY = os.getenv('SECRET_KEY', '')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-local-dev-only'
+    else:
+        raise ImproperlyConfigured(
+            '缺少环境变量 SECRET_KEY。请在部署环境（.env 或 docker-compose 的 environment）中设置随机值，'
+            '生成方式：python -c "import secrets; print(secrets.token_urlsafe(64))"'
+        )
 
-# 信任 Nginx 代理转发的请求（CSRF 校验需要）
+# 逗号分隔，可用环境变量覆盖；不再使用 "*"（那等于关闭 Host 校验）
+ALLOWED_HOSTS = [
+    h.strip() for h in os.getenv(
+        'ALLOWED_HOSTS',
+        'www.minghaishiyi.cn,minghaishiyi.cn,110.40.159.5,172.19.77.65,127.0.0.1,localhost',
+    ).split(',') if h.strip()
+]
+
+# 信任 Nginx 代理转发的请求（CSRF 校验需要），逗号分隔
 CSRF_TRUSTED_ORIGINS = [
-    "http://minghaishiyi.cn:8000",
-    "http://101.200.89.198:8000",
+    o.strip() for o in os.getenv(
+        'CSRF_TRUSTED_ORIGINS',
+        'https://www.minghaishiyi.cn,https://minghaishiyi.cn,http://172.19.77.65:8000,http://127.0.0.1:8000',
+    ).split(',') if o.strip()
 ]
 
 USE_X_FORWARDED_HOST = True

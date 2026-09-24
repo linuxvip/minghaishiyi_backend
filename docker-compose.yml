@@ -12,6 +12,12 @@ services:
       - db
     environment:
       - DJANGO_SETTINGS_MODULE=minghaishiyi.settings
+      # SECRET_KEY 必须由宿主机 .env / 环境变量提供，缺失时 compose 会直接报错停止，
+      # 避免退回不安全的默认值（默认值一旦公开即可伪造 JWT 冒充任意用户）
+      - SECRET_KEY=${SECRET_KEY:?请在 .env 中设置 SECRET_KEY，生成方式：python -c "import secrets; print(secrets.token_urlsafe(64))"}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-www.minghaishiyi.cn,minghaishiyi.cn,110.40.159.5,172.19.77.65,127.0.0.1,localhost}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-https://www.minghaishiyi.cn,https://minghaishiyi.cn,http://172.19.77.65:8000,http://127.0.0.1:8000}
       - DB_ENGINE=django.db.backends.mysql
       - DB_NAME=minghaishiyi
       - DB_USER=root
