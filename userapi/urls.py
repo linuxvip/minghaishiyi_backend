@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .views import (
     RegisterView,
+    WechatLoginView,
     LogoutView,
     MeView,
     UserConfigView,
@@ -14,6 +15,8 @@ urlpatterns = [
     # 认证
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/login/', TokenObtainPairView.as_view(), name='auth-login'),
+    # 微信小程序登录：code 换 JWT（T-5.2）
+    path('auth/wechat/', WechatLoginView.as_view(), name='auth-wechat'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='auth-refresh'),
     path('auth/logout/', LogoutView.as_view(), name='auth-logout'),
     path('auth/me/', MeView.as_view(), name='auth-me'),

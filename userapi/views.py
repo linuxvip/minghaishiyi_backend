@@ -6,15 +6,32 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
+from django.db import IntegrityError, transaction
+from drf_yasg.utils import swagger_auto_schema
+import secrets
 
 from .models import UserProfile, UserCase, Favorite
 from .serializers import (
     RegisterSerializer,
+    WechatLoginSerializer,
     UserProfileSerializer,
     UserCaseSerializer,
     FavoriteSerializer,
     OBJECT_TYPE_MAP,
 )
+from .wechat import WechatError, code2session, is_configured
+
+
+def _username_for(openid):
+    """openid → 一个合法且不冲突的 Django 用户名"""
+    base = 'wx_' + openid[:28]
+    if not User.objects.filter(username=base).exists():
+        return base
+    for _ in range(5):
+        candidate = f'{base[:24]}_{secrets.token_hex(3)}'
+        if not User.objects.filter(username=candidate).exists():
+            return candidate
+    return 'wx_' + secrets.token_hex(16)
 
 
 def _issue_tokens(user):
@@ -37,6 +54,95 @@ class RegisterView(APIView):
             'tokens': _issue_tokens(user),
             'user': UserProfileSerializer(profile).data,
         }, status=status.HTTP_201_CREATED)
+
+
+class WechatLoginView(APIView):
+    """POST /api/auth/wechat/ —— 小程序 wx.login() 的 code 换 JWT（T-5.2）
+
+    流程：code → jscode2session → openid → 找到或创建用户 → 签发与网页端同一套 JWT。
+    两边共用同一批用户数据，所以网页端登录过的账号（如果绑过微信）在小程序里是同一个。
+
+    关于 username：微信不给用户名，但 Django 的 User 必须有。这里用 `wx_<openid 前 28 位>`
+    生成，撞车时补随机后缀——openid 本身唯一，所以撞车只可能来自人为占位。
+    """
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(
+        tags=['认证'],
+        operation_description='微信小程序登录：用 wx.login() 的 code 换 JWT',
+        request_body=WechatLoginSerializer,
+        responses={200: '登录成功', 400: 'code 无效 / 微信接口报错', 503: '服务端未配置微信密钥'},
+    )
+    def post(self, request):
+        if not is_configured():
+            return Response(
+                {'error': '服务端尚未配置微信登录，请稍后再试'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        serializer = WechatLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        code = serializer.validated_data['code']
+        nickname = serializer.validated_data.get('nickname', '')
+
+        try:
+            session = code2session(code)
+        except WechatError as exc:
+            return Response({'error': exc.message}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile = UserProfile.objects.filter(openid=session['openid']).first()
+        if profile is not None and not profile.user.is_active:
+            return Response({'error': '该账号已被停用'}, status=status.HTTP_403_FORBIDDEN)
+
+        created = False
+        if profile is None:
+            profile = self._create_profile(session, nickname)
+            created = True
+        else:
+            self._fill_missing(profile, session, nickname)
+
+        return Response({
+            'tokens': _issue_tokens(profile.user),
+            'user': UserProfileSerializer(profile).data,
+            'created': created,
+        })
+
+    @staticmethod
+    def _create_profile(session, nickname):
+        """建号。openid 上的唯一约束兜住并发重复登录：撞了就回头查已有的那条。"""
+        openid = session['openid']
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=_username_for(openid),
+                    # 微信用户没有密码：写一个不可用的，保证密码登录这条路是关着的
+                    password=None,
+                    is_active=True,
+                )
+                return UserProfile.objects.create(
+                    user=user,
+                    nickname=nickname or '微信用户',
+                    openid=openid,
+                    unionid=session.get('unionid'),
+                )
+        except IntegrityError:
+            profile = UserProfile.objects.filter(openid=openid).first()
+            if profile is None:
+                raise
+            return profile
+
+    @staticmethod
+    def _fill_missing(profile, session, nickname):
+        """老账号补 unionid；昵称只在用户自己没设过的时候才用微信给的兜底"""
+        updates = []
+        if session.get('unionid') and not profile.unionid:
+            profile.unionid = session['unionid']
+            updates.append('unionid')
+        if nickname and not profile.nickname:
+            profile.nickname = nickname
+            updates.append('nickname')
+        if updates:
+            profile.save(update_fields=updates + ['updated_time'])
 
 
 class LogoutView(APIView):

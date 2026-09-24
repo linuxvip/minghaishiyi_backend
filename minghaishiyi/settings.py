@@ -205,6 +205,14 @@ REST_FRAMEWORK = {
     ],
 }
 
+# 微信小程序（T-5.3）
+# 密钥只从环境变量读，绝不写进代码——本仓库是公开的，密钥一旦入库就等于公开。
+# 未配置时 /api/auth/wechat/ 会返回 503，而不是签出一个假用户。
+WX_APPID = os.getenv('WX_APPID', '')
+WX_APPSECRET = os.getenv('WX_APPSECRET', '')
+# 调微信接口的超时（秒）
+WX_API_TIMEOUT = float(os.getenv('WX_API_TIMEOUT', '5'))
+
 # 使用自定义的日志配置
 from .logging import LOGGING
 LOGGING = LOGGING

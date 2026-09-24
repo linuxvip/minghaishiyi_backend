@@ -9,6 +9,12 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', verbose_name="用户")
     nickname = models.CharField(max_length=64, blank=True, default='', verbose_name="昵称")
     preferences = models.JSONField(default=dict, blank=True, verbose_name="配置喜好")
+
+    # 微信登录身份（T-5.1）。允许为空——网页端注册的老账号没有 openid。
+    # 用 unique + null 而不是 unique + 空串默认值：唯一索引允许多个 NULL，
+    # 却只允许一个空串，后者会让第二个网页端用户一注册就撞唯一约束。
+    openid = models.CharField(max_length=64, null=True, blank=True, unique=True, verbose_name="微信 openid")
+    unionid = models.CharField(max_length=64, null=True, blank=True, unique=True, verbose_name="微信 unionid")
     created_time = models.DateTimeField(auto_now_add=True, verbose_name="注册时间")
     updated_time = models.DateTimeField(auto_now=True, verbose_name="更新时间")
 

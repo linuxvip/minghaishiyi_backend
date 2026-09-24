@@ -45,6 +45,15 @@ class RegisterSerializer(serializers.Serializer):
         return user
 
 
+class WechatLoginSerializer(serializers.Serializer):
+    """小程序登录入参（T-5.2）"""
+    code = serializers.CharField(max_length=128, help_text='wx.login() 拿到的临时登录凭证')
+    nickname = serializers.CharField(
+        max_length=64, required=False, allow_blank=True, default='',
+        help_text='可选的昵称，只在首次注册时用作初始值；用户改过昵称后不再覆盖',
+    )
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
 

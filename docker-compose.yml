@@ -24,6 +24,9 @@ services:
       - DB_PASSWORD=123456
       - DB_HOST=db
       - DB_PORT=3306
+      # 微信小程序登录（T-5.2 / T-5.3）。未设置时 /api/auth/wechat/ 返回 503。
+      - WX_APPID=${WX_APPID:-}
+      - WX_APPSECRET=${WX_APPSECRET:-}
 
   nginx:
     image: nginx:alpine
